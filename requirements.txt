@@ -1,0 +1,5 @@
+#Criar o ambiente virtual -  python -m venv Virtual
+
+#ativar o ambiente virtual -    .\Virtual\Scripts\Activate.ps1
+
+#- pip install Flask
