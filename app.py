@@ -1,8 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for
+import pandas as pd
+import openpyxl
+import numpy as np
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'
 
-Senha_correta = 'gui'
+Senha_correta = 'g'
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -10,16 +14,79 @@ def login():
     if request.method == 'POST':
         senha = request.form['senha']
         if senha == Senha_correta:
-            return redirect(url_for('pagina_secreta'))
+            return redirect(url_for('upload'))
         else:
             error = 'Senha incorreta. Tente novamente.'
-            print('Erro: Senha incorreta!')
     
     return render_template('index.html', mensagem=error)
 
-@app.route('/pagina_secreta')
-def pagina_secreta():
-    return 'Você está na página secreta!'
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and file.filename.endswith('.xlsx'):
+            file_path = 'uploaded_file.xlsx'
+            file.save(file_path)
+            
+            # Ler o arquivo enviado
+            wb = openpyxl.load_workbook(file_path)
+            sheet = wb.active
+            
+            # Define os nomes de busca e a ordem das colunas desejadas
+            nomes_de_busca = {
+                'Order number': 'Order number',
+                'Delivery Date': 'Delivery Date',
+                'LINE': 'LINE',
+                'ITEM CODE': 'ITEM CODE',
+                'ITEM': 'ITEM',
+                'ITEM PRICE': 'ITEM PRICE',
+                'U. M.': 'U. M.',
+                'ORDERED QUANTITY': 'ORDERED QUANTITY'
+            }
+
+            # Inicializa listas para armazenar os dados
+            dados_extraidos = {col: [] for col in nomes_de_busca.values()}
+
+            # Função para encontrar e extrair dados da coluna
+            def encontrar_dados(sheet, nomes_de_busca):
+                colunas_indices = {}
+                # Identificar os índices das colunas relevantes
+                primeira_linha = list(sheet.iter_rows(min_row=1, max_row=1, values_only=True))[0]
+                for idx, col in enumerate(primeira_linha):
+                    col = col.strip() if isinstance(col, str) else col
+                    if col in nomes_de_busca:
+                        colunas_indices[nomes_de_busca[col]] = idx
+
+                # Iterar sobre as linhas restantes
+                for row in sheet.iter_rows(min_row=2, values_only=True):
+                    for nome, col_idx in colunas_indices.items():
+                        if col_idx < len(row):
+                            valor = row[col_idx]
+                            dados_extraidos[nome].append(valor if valor is not None else '')
+
+            # Encontrar e extrair dados da planilha
+            encontrar_dados(sheet, nomes_de_busca)
+            
+            # Ajustar o comprimento das colunas para o mesmo tamanho
+            max_length = max(len(dados) for dados in dados_extraidos.values())
+            for nome in dados_extraidos:
+                while len(dados_extraidos[nome]) < max_length:
+                    dados_extraidos[nome].append(np.nan)
+            
+            # Criar um DataFrame com os dados encontrados, na ordem desejada
+            dados_extraidos_df = pd.DataFrame(dados_extraidos, columns=list(nomes_de_busca.values()))
+
+            # Caminho para salvar a nova planilha
+            nova_planilha_path = 'deu certo o orders agora.xlsx'
+            
+            # Criar uma nova planilha com os dados extraídos
+            with pd.ExcelWriter(nova_planilha_path, engine='openpyxl') as writer:
+                dados_extraidos_df.to_excel(writer, index=False, sheet_name='Dados')
+
+            return render_template('processar.html', mensagem=f'Arquivo carregado e processado com sucesso! A nova planilha foi gerada como "{nova_planilha_path}".')
+        else:
+            return render_template('processar.html', mensagem='Arquivo inválido. Envie um arquivo .xlsx.')
+    return render_template('processar.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

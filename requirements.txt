@@ -3,3 +3,8 @@
 #ativar o ambiente virtual -    .\Virtual\Scripts\Activate.ps1
 
 #- pip install Flask
+#- pip install pandas
+#- pip install openpyxl
+#- pip install xlrd>=2.0.1
+#- pip install flask pandas openpyxl
+

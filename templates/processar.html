@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload e Processamento</title>
+</head>
+<body>
+    <h1>{{ mensagem }}</h1>
+    {% if not mensagem %}
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Enviar</button>
+    </form>
+    {% endif %}
+    <a href="/">Voltar para o Login</a>
+</body>
+</html>
