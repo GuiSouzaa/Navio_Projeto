@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for
 import pandas as pd
 import openpyxl
 import numpy as np
@@ -85,22 +85,12 @@ def upload():
             dados_extraidos_df = pd.DataFrame(dados_extraidos, columns=list(nomes_de_busca.values()))
 
             # Adicionar ID_PRODUTO à planilha de pedidos
-            dados_extraidos_df['ID'] = dados_extraidos_df['ITEM CODE'].map(codigo_para_id)
+            dados_extraidos_df['ID_PRODUTO'] = dados_extraidos_df['ITEM CODE'].map(codigo_para_id)
 
-            # Adicionar colunas adicionais com valores padrão se necessário
-            colunas_adicionais = ['nome', 'seq', 'code', 'item', 'price', 'vol', 'unid', 'cxs', 'tipo p', 'caixas pallet', 'v pallet', 'pallets', 'sobra', 'valor estimado']
-            for coluna in colunas_adicionais:
-                if coluna not in dados_extraidos_df.columns:
-                    dados_extraidos_df[coluna] = np.nan
-            
-            # Reordenar as colunas na ordem desejada
-            colunas_ordenadas = ['ID', 'nome', 'seq', 'code', 'ITEM', 'price', 'U. M.', 'ORDERED QUANTITY', 'vol', 'unid', 'cxs', 'tipo p', 'caixas pallet', 'v pallet', 'pallets', 'sobra', 'valor estimado']
-            dados_extraidos_df = dados_extraidos_df[colunas_ordenadas]
-            
-            # Verificar se há valores nulos na coluna 'ID'
-            valores_nulos = dados_extraidos_df[dados_extraidos_df['ID'].isna()]
+            # Verificar se há valores nulos na coluna 'ID_PRODUTO'
+            valores_nulos = dados_extraidos_df[dados_extraidos_df['ID_PRODUTO'].isna()]
             if not valores_nulos.empty:
-                print("\nValores nulos na coluna 'ID':")
+                print("\nValores nulos na coluna 'ID_PRODUTO':")
                 print(valores_nulos[['ITEM CODE', 'ITEM']])
             
             # Caminho para salvar a nova planilha
@@ -109,11 +99,10 @@ def upload():
             # Criar uma nova planilha com os dados extraídos
             with pd.ExcelWriter(nova_planilha_path, engine='openpyxl') as writer:
                 dados_extraidos_df.to_excel(writer, index=False, sheet_name='Dados')
-            
-            flash('Arquivo carregado e processado com sucesso! O download foi iniciado.', 'success')
-            return send_file(nova_planilha_path, as_attachment=True)
+
+            return render_template('processar.html', mensagem=f'Arquivo carregado e processado com sucesso! A nova planilha foi gerada como "{nova_planilha_path}".')
         else:
-            flash('Arquivo inválido. Envie um arquivo .xlsx.', 'danger')
+            return render_template('processar.html', mensagem='Arquivo inválido. Envie um arquivo .xlsx.')
     return render_template('processar.html')
 
 if __name__ == '__main__':
